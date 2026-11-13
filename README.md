@@ -22,4 +22,4 @@ Settings, session credentials, rules and undo history are stored locally. Notes 
 
 Per-vault organization rules, manual line filing, AI previews, Stop and Undo are available. Duplicate Undo and balance refresh were repaired.
 
-Use the matching GitHub release for installation availability. Community directory review is separate from source validation.
+Obsidian Community release **3.16.6** requires Obsidian **1.11.4** or later. [GitHub release](https://github.com/tutivsoft-com/Hudson-Auto-Organizer-AI/releases/tag/3.16.6).
