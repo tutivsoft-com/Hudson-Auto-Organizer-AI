@@ -1,0 +1,114 @@
+/** Presentation only: preserve Setting instances, callbacks and live status elements. */
+const keySettings: Record<string, string[]> = {
+  "hudson-auto-organizer-ai": ["Excluded folders"],
+};
+const appTitles: Record<string, string> = {
+  "hudson-auto-organizer-ai": "Hudson Auto Organizer AI",
+};
+
+function label(node: Element): string {
+  return (node.querySelector(".setting-item-name")?.textContent || node.textContent || "").trim();
+}
+
+function makeSection(root: HTMLElement, title: string, kind = "everyday"): HTMLElement {
+  const section = root.createEl("section", { cls: `ui-settings-section ui-section-${kind}` });
+  section.createEl("h3", { text: title, cls: "ui-section-heading" });
+  return section.createDiv({ cls: "ui-settings-card" });
+}
+
+export function applySettingsLayout(root: HTMLElement, appId: string, appVersion?: string): void {
+  if (root.querySelector(":scope > .ui-settings-section")) return;
+  root.addClass("ui-settings-layout", "auto-organizer-settings");
+  const nodes = Array.from(root.children) as HTMLElement[];
+  const account = nodes.find(node => node.classList.contains("constance-account-billing-section"));
+  let accountCard: HTMLElement | undefined;
+  if (account) {
+    account.addClass("ui-settings-section", "ui-section-billing");
+    const heading = account.querySelector(":scope > h3") as HTMLElement | null;
+    heading?.addClass("ui-section-heading");
+    if (heading) heading.textContent = "Account";
+    const content = Array.from(account.children).filter(node => node !== heading);
+    accountCard = account.createDiv({ cls: "ui-settings-card" });
+    content.forEach(node => accountCard!.appendChild(node));
+    accountCard.querySelectorAll("button").forEach(button => {
+      if (button.textContent?.trim() === "Connect") button.addClass("mod-cta");
+    });
+  }
+  const title = nodes.find(node => /^H[12]$/.test(node.tagName)) ||
+    (appTitles[appId] ? root.createEl("h2", { text: appTitles[appId] }) : undefined);
+  if (title) { title.addClass("ui-settings-title"); root.prepend(title); }
+  if (account) { if (title) title.after(account); else root.prepend(account); }
+
+  let current: HTMLElement | undefined;
+  let support: HTMLElement | undefined;
+  let viewSection: HTMLElement | undefined;
+  let billingContext = false;
+  const supportLabels = new Set(["Help", "Debug logging", "Enable debug logging", "Diagnostics"]);
+  const billingLabels = /^(?:Billing(?: & usage)?|Credits|Credit balance|OCR credits|Purchased balance|Refresh (?:purchased )?balance|Refresh account|Buy .+|Account)$/i;
+  for (const node of nodes) {
+    if (node === account || node === title) continue;
+    const name = label(node);
+    if (node.classList.contains("setting-item") && supportLabels.has(name)) {
+      support ||= makeSection(root, "Help and diagnostics", "support");
+      support.appendChild(node); continue;
+    }
+    if (node.classList.contains("setting-item") && /^Settings (?:mode|view)$/i.test(name)) {
+      const view = makeSection(root, "Settings view"); view.appendChild(node); viewSection = view.parentElement!; continue;
+    }
+    const isHeading = /^H[1-4]$/.test(node.tagName) || node.classList.contains("setting-item-heading");
+    if (isHeading) {
+      billingContext = /^(?:Billing(?: & usage)?|Credits & billing)$/i.test(name);
+      if (billingContext) { node.remove(); continue; }
+      const kind = /recovery|privacy|diagnostic/i.test(name) ? "support" : /AI|quality|naming|capture|date|original files/i.test(name) ? "feature" : "everyday";
+      current = makeSection(root, name, kind); node.remove(); continue;
+    }
+    if (accountCard && (node.classList.contains("ui-billing-packs") ||
+      node.classList.contains("ui-billing-summary") ||
+      (node.classList.contains("setting-item") && billingLabels.test(name)) ||
+      (billingContext && node.tagName === "P"))) {
+      accountCard.appendChild(node);
+      if (node.tagName === "P") { node.addClass("ui-billing-summary"); if (billingContext && !/summary/.test(node.className.replace(/ui-billing-summary/g, ""))) node.addClass("ui-credit-usage"); }
+      continue;
+    }
+    billingContext = false;
+    current ||= makeSection(root, "Everyday settings");
+    current.appendChild(node);
+    if (node.tagName === "P") node.addClass("ui-section-note");
+  }
+  // Account balances are status summaries, not purchase instructions.
+  root.querySelectorAll('[class*="summary"]').forEach(summary => {
+    if (!Array.from(summary.classList).some(cls => cls !== 'ui-billing-summary' && cls !== 'ui-credit-usage' && /(?:credit|balance|billing|usage).*summary/.test(cls))) return;
+    summary.classList.remove('ui-credit-usage');
+    if(accountCard && !accountCard.contains(summary))accountCard.appendChild(summary);
+  });
+  // Keep buying credits separate from account identity and balance.
+  const packs = accountCard?.querySelector('.ui-billing-packs');
+  let purchaseSection: HTMLElement | undefined;
+  if (packs) {
+    const purchaseCard = makeSection(root, 'Buy credits', 'billing');
+    accountCard?.querySelectorAll('.ui-credit-usage').forEach(note => purchaseCard.appendChild(note));
+    purchaseCard.appendChild(packs);
+    purchaseSection = purchaseCard.parentElement!;
+    account?.after(purchaseSection);
+  }
+  // Support is deliberately last; it must not compete with setup or everyday controls.
+  if (viewSection) { if (purchaseSection) purchaseSection.after(viewSection); else if (account) account.after(viewSection); else if (title) title.after(viewSection); else root.prepend(viewSection); }
+  if (support) root.appendChild(support.parentElement!);
+  for (const card of Array.from(root.querySelectorAll(".ui-settings-card"))) {
+    if (!card.children.length) card.parentElement?.remove();
+  }
+  const rows = Array.from(root.querySelectorAll(".ui-settings-card .setting-item"))
+    .filter(node => !node.closest(".ui-section-billing, .ui-section-support") && !/^Settings (mode|view)$/i.test(label(node)));
+  const limit = Math.max(1, Math.ceil(rows.length * 0.1));
+  let marked = 0;
+  for (const name of keySettings[appId] || []) {
+    const row = rows.find(node => label(node) === name);
+    if (!row || marked >= limit) continue;
+    row.classList.add("ui-key-setting");
+    const badge = document.createElement("span");
+    badge.className = "ui-key-badge"; badge.textContent = "Important";
+    row.querySelector(".setting-item-name")?.appendChild(badge);
+    marked++;
+  }
+  if (appVersion) root.createEl("footer", { text: `Version ${appVersion}`, cls: "setting-item-description" });
+}
