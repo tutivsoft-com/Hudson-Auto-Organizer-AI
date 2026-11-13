@@ -5,7 +5,7 @@ import { getOpenRouterApiKey } from "./openrouter";
 import { AiProvider, OPENAI_MODEL, OPENAI_SECRET_ID, OPENROUTER_MODEL } from "./ai-provider";
 
 export async function getAiConnection(app: App, settings: AutoOrganizerSettings, pluginDir?: string): Promise<{ apiKey: string; provider: AiProvider; model: string }> {
-  const provider = settings.aiProvider === "openrouter" ? "openrouter" : "openai";
+  const provider = settings.aiProvider === "openai" ? "openai" : "openrouter";
   diagnostics.event("ai.connection", { provider });
   if (provider === "openrouter") return { provider, apiKey: await getOpenRouterApiKey(), model: settings.model || OPENROUTER_MODEL };
   let apiKey = app.secretStorage?.getSecret(OPENAI_SECRET_ID)?.trim() || "";

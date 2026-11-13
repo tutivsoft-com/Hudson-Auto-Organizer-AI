@@ -1,7 +1,7 @@
 {
   "id": "hudson-auto-organizer-ai",
   "name": "Hudson Auto Organizer AI",
-  "version": "3.16.5",
+  "version": "3.16.6",
   "minAppVersion": "1.11.4",
   "description": "Sort notes into folders, file capture lines, and find duplicate notes with AI.",
   "author": "Rahul",

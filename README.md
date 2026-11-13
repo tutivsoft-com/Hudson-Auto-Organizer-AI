@@ -10,7 +10,7 @@ Manual destinations and line filing work without AI credits. Exact duplicate che
 
 ## AI and accounts
 
-Configure your own OpenAI key through Obsidian Secret Storage, or choose OpenRouter in settings. OpenAI is the default provider. AI routing sends bounded note excerpts and relevant destination excerpts to the selected provider. Duplicate similarity checks send selected excerpts for embeddings. Organization rules are saved separately for each vault. No owner rules or provider credentials are included in the public package.
+Configure your own OpenAI key through Obsidian Secret Storage, or choose OpenRouter in settings. OpenRouter is the default provider for new installations. The managed OpenRouter key has a USD $1 lifetime limit with no reset. Existing saved provider choices are preserved. AI routing sends bounded note excerpts and relevant destination excerpts to the selected provider. Duplicate similarity checks send selected excerpts for embeddings. Organization rules are saved separately for each vault. No owner rules or provider credentials are included in the public package.
 
 AI planning uses a connected Constance account and organize-run credits, including planning cancelled after a response. Manual filing and local duplicate previews do not use AI credits. Current offers and balances come from Constance at https://app.tutivsoft.com. Open the checkout link returned by that service. A browser return alone does not grant credits.
 
@@ -18,7 +18,7 @@ AI planning uses a connected Constance account and organize-run credits, includi
 
 Settings, session credentials, rules and undo history are stored locally. Notes stay local except the excerpts sent for requested AI actions. Account requests do not include note bodies. Anonymous fixed-name usage events use the existing analytics service. Diagnostic logs stay local unless you copy and share them. Do not share keys or session tokens.
 
-## Version 3.16.5
+## Version 3.16.6
 
 Per-vault organization rules, manual line filing, AI previews, Stop and Undo are available. Duplicate Undo and balance refresh were repaired.
 

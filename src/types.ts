@@ -84,7 +84,7 @@ export const DEFAULT_SETTINGS: AutoOrganizerSettings = {
   openRouterSecretName: "",
   debugLogging: false,
   model: "~deepseek/deepseek-v4-flash-latest",
-  aiProvider: "openai",
+  aiProvider: "openrouter",
   openaiModel: "gpt-6-luna",
   rulesFilePath: "Auto Organizer Rules.md",
   lineDestinationFolder: "Projects, Areas, Resources",

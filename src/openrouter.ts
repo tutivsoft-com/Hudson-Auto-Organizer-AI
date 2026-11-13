@@ -8,7 +8,7 @@ import { diagnostics } from "./diagnostics";
 
 const REMOTE_KEY_URL = "https://raw.githubusercontent.com/tutivsoft-com/Resources/main/hudson-auto-organizer-ai.txt";
 // This envelope protects the stored key from casual reading; the provider-side
-// $2 lifetime cap is the actual spending limit because plugin code is inspectable.
+// $1 lifetime cap is the actual spending limit because plugin code is inspectable.
 const REMOTE_KEY_CACHE_MS = 15 * 60 * 1000;
 let cachedKey = "";
 let cachedKeyAt = 0;
