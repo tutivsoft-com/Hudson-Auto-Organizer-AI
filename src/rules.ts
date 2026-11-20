@@ -55,9 +55,18 @@ export function createRulesTemplate(): string {
   return ["# Auto Organizer aliases", "", "Organization preferences are entered in Hudson settings. Optional shortcuts use one alias per line:", "", "Reference => Resources", "Ideas => Resources/Ideas", "", "Aliases must point to a whole-note folder allowed by your saved organization rules.", ""].join("\n");
 }
 
+const attachmentExclusion = /\b(?:without|excluding|except(?: for)?|exclude|skip|leave|no|(?:do not|don['’]t|never)\s+(?:move|include|bring|copy|take))\s+(?:(?:any|all|its|the|linked|my)\s+)*attachments?\b(?:\s+behind)?/i;
+const attachmentInclusion = /\b(?:and|with|including|include|bring|move|take)\s+(?:(?:all|its|the|linked|my)\s+)*attachments?\b/i;
+
+export function commandIncludesAttachments(instruction: string): boolean {
+  return !attachmentExclusion.test(instruction) && attachmentInclusion.test(instruction);
+}
+
 export function extractDestinationPhrase(instruction: string): string | undefined {
   const cleaned = instruction
-    .replace(/\b(?:and\s+)?(?:its\s+)?attachments?\b/gi, " ")
+    .replace(attachmentExclusion, " ")
+    .replace(attachmentInclusion, " ")
+    .replace(/[,;]\s*$/, "")
     .replace(/[.!?]+$/g, "")
     .trim();
   const match = cleaned.match(/\b(?:to|into)\s+(.+)$/i) ?? cleaned.match(/\bin\s+(.+)$/i);

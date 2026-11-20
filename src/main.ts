@@ -2,7 +2,7 @@ import { FileSystemAdapter, Menu, Notice, Platform, Plugin, TAbstractFile, TFile
 import { AutoOrganizerSettingTab } from "./settings-tab";
 import { AutoOrganizeResultsModal, DuplicateResultsModal, FolderPickerModal, InstructionModal } from "./modals";
 import { findFolderByPath, isExcludedPath, listFolders, matchFolderPhrase, normalizePath, parentFolderPath } from "./folder-utils";
-import { createRulesTemplate, extractDestinationPhrase, parseRules, resolveLearnedMove, resolveRule } from "./rules";
+import { commandIncludesAttachments, createRulesTemplate, extractDestinationPhrase, parseRules, resolveLearnedMove, resolveRule } from "./rules";
 import { suggestDestination } from "./openrouter";
 import { getAiConnection } from "./ai-connection";
 import { OPENAI_MODEL, providerName } from "./ai-provider";
@@ -488,7 +488,7 @@ export default class AutoOrganizerPlugin extends Plugin {
     menu.addItem((item) => item
       .setSection("hudson-auto-organizer-ai").setTitle("Hudson: Preview deleting exact duplicate copies")
       .setIcon("copy")
-      .onClick(() => void this.autoOrganizeFolder(folder, "duplicates")));
+      .onClick(() => void this.autoOrganizeFolder(folder, "duplicates", true)));
     menu.addItem((item) => item
       .setSection("hudson-auto-organizer-ai").setTitle("Hudson: Organize non-duplicates here")
       .setIcon("folder-open")
@@ -928,12 +928,32 @@ export default class AutoOrganizerPlugin extends Plugin {
     const plan = this.newPlan(`${folder.path || "Vault root"} (${mode})`);
     await this.showPlan(plan, folder, async (manual, status, stopped) => {
       // Snapshot before AI. Execution refuses files edited while the preview is open.
-      const files = this.collectMarkdownFiles(folder).filter((file) => !plan.actions.some((action) =>
-        action.sourcePath === file.path && (action.status === "done" || Boolean(action.destination) || action.kind === "line")));
+      const candidates = this.collectMarkdownFiles(folder);
       const contents = new Map<string, string>();
+      const duplicatePaths = new Set<string>();
+      if (mode === "nonduplicates") {
+        status("Checking for exact duplicates locally...");
+        const firstByContent = new Map<string, string>();
+        for (const file of candidates) {
+          if (stopped()) return;
+          const content = await this.app.vault.read(file);
+          contents.set(file.path, content);
+          const normalized = content.replace(/\r\n/gu, "\n").trim();
+          if (!normalized) continue;
+          const key = await digest(normalized);
+          const first = firstByContent.get(key);
+          if (first) {
+            duplicatePaths.add(first);
+            duplicatePaths.add(file.path);
+          } else firstByContent.set(key, file.path);
+        }
+        plan.actions = plan.actions.filter((action) => action.status !== "pending" || !duplicatePaths.has(action.sourcePath));
+      }
+      const files = candidates.filter((file) => !duplicatePaths.has(file.path) && !plan.actions.some((action) =>
+        action.sourcePath === file.path && (action.status === "done" || Boolean(action.destination) || action.kind === "line")));
       for (const file of files) {
         if (stopped()) return;
-        const content = await this.app.vault.read(file);
+        const content = contents.get(file.path) ?? await this.app.vault.read(file);
         contents.set(file.path, content);
         const fingerprint = await digest(content);
         if (plan.snapshots[file.path] && plan.snapshots[file.path] !== fingerprint) throw new Error("Source changed since review. Start a new review.");
@@ -1033,6 +1053,10 @@ export default class AutoOrganizerPlugin extends Plugin {
   }
 
   private async findDuplicatesInFolder(folder: TFolder): Promise<void> {
+    if (isExcludedPath(folder.path, this.settings.excludedFolders)) {
+      new Notice("This folder is excluded from duplicate scans.");
+      return;
+    }
     const adapter = this.app.vault.adapter;
     if (!Platform.isDesktopApp || !(adapter instanceof FileSystemAdapter)) {
       new Notice("Folder duplicate scanning currently needs Obsidian Desktop for bounded file reads.");
@@ -1047,6 +1071,7 @@ export default class AutoOrganizerPlugin extends Plugin {
     const notes: TFile[] = [];
     const visit = (current: TFolder): void => {
       for (const child of current.children) {
+        if (isExcludedPath(child.path, this.settings.excludedFolders)) continue;
         if (child instanceof TFolder) visit(child);
         else if (child instanceof TFile && child.extension.toLocaleLowerCase() === "md") notes.push(child);
       }
@@ -1116,13 +1141,14 @@ export default class AutoOrganizerPlugin extends Plugin {
     if (!primary) return;
     const folders = listFolders(this.app.vault.getRoot()).filter((folder) => isFilingFolder(folder.path, this.policy) && !isExcludedPath(folder.path, this.settings.excludedFolders));
     const explicitPhrase = extractDestinationPhrase(instruction);
+    const includeAttachments = commandIncludesAttachments(instruction);
     const rules = await this.loadRules();
     if (explicitPhrase) {
       const matches = this.policy.filingFolders.filter((path) => !isExcludedPath(path, this.settings.excludedFolders)
         && (normalizePath(path) === normalizePath(explicitPhrase)
           || rules.some((rule) => normalizePath(rule.phrase) === normalizePath(explicitPhrase) && rule.destination === path)));
       if (matches.length === 1) {
-        await this.moveFiles(files, { path: matches[0] }, instruction, this.commandIncludesAttachments(instruction));
+        await this.moveFiles(files, { path: matches[0] }, instruction, includeAttachments);
         return;
       }
     }
@@ -1134,21 +1160,21 @@ export default class AutoOrganizerPlugin extends Plugin {
       }
       const directMatches = matchFolderPhrase(explicitPhrase, folders, false, this.settings.excludedFolders);
       if (directMatches.length === 1) {
-        await this.moveFiles(files, directMatches[0], instruction, this.commandIncludesAttachments(instruction));
+        await this.moveFiles(files, directMatches[0], instruction, includeAttachments);
         return;
       }
       if (directMatches.length > 1) {
-        this.openChoicePicker(files, directMatches, instruction, this.commandIncludesAttachments(instruction));
+        this.openChoicePicker(files, directMatches, instruction, includeAttachments);
         return;
       }
 
       const ruleMatches = resolveRule(explicitPhrase, rules, folders, this.settings.excludedFolders);
       if (ruleMatches.length === 1) {
-        await this.moveFiles(files, ruleMatches[0], instruction, this.commandIncludesAttachments(instruction));
+        await this.moveFiles(files, ruleMatches[0], instruction, includeAttachments);
         return;
       }
       if (ruleMatches.length > 1) {
-        this.openChoicePicker(files, ruleMatches, instruction, this.commandIncludesAttachments(instruction));
+        this.openChoicePicker(files, ruleMatches, instruction, includeAttachments);
         return;
       }
     }
@@ -1157,7 +1183,7 @@ export default class AutoOrganizerPlugin extends Plugin {
       ? resolveLearnedMove(parentFolderPath(primary.path), primary.basename, this.settings.learnedMoves, folders, this.settings.excludedFolders)
       : undefined;
     if (learned && files.length === 1) {
-      await this.moveFiles(files, learned, instruction, this.commandIncludesAttachments(instruction));
+      await this.moveFiles(files, learned, instruction, includeAttachments);
       return;
     }
 
@@ -1171,7 +1197,7 @@ export default class AutoOrganizerPlugin extends Plugin {
       new Notice(error instanceof Error ? error.message : "AI connection is unavailable."); return null;
     });
     if (!connection) {
-      this.openChoicePicker(files, eligibleFolders, instruction, this.commandIncludesAttachments(instruction));
+      this.openChoicePicker(files, eligibleFolders, instruction, includeAttachments);
       return;
     }
     void matomoFor(this)?.event("feature", "started", "note_routing");
@@ -1195,7 +1221,9 @@ export default class AutoOrganizerPlugin extends Plugin {
           eligibleFolders.map((folder) => folder.path)
         )
         : [];
-      const destinationSamples = await this.planDestinationContext(this.newPlan(instruction), eligibleFolders.map((folder) => folder.path))([{ path: primary.path, excerpt: noteExcerpt || primary.basename }], () => false);
+      const destinationSamples = this.settings.sendNoteContent
+        ? await this.planDestinationContext(this.newPlan(instruction), eligibleFolders.map((folder) => folder.path))([{ path: primary.path, excerpt: noteExcerpt || primary.basename }], () => false)
+        : [];
       const suggestion = await this.runMeteredAi(primary, "AI routing", () => suggestDestination({
         policy: this.policy,
         apiKey: connection.apiKey,
@@ -1213,15 +1241,15 @@ export default class AutoOrganizerPlugin extends Plugin {
         ? findFolderByPath(suggestion.destination, eligibleFolders)
         : undefined;
       if (destination && suggestion.confidence >= AUTO_ROUTE_CONFIDENCE) {
-        await this.moveFiles(files, destination, instruction, this.commandIncludesAttachments(instruction));
+        await this.moveFiles(files, destination, instruction, includeAttachments);
         void matomoFor(this)?.event("feature", "completed", "note_routing");
         return;
       }
-      this.openChoicePicker(files, eligibleFolders, instruction, this.commandIncludesAttachments(instruction));
+      this.openChoicePicker(files, eligibleFolders, instruction, includeAttachments);
     } catch {
       void matomoFor(this)?.event("feature", "failed", "note_routing");
       new Notice("The AI provider could not suggest a folder. Choose one directly or try again.");
-      this.openChoicePicker(files, eligibleFolders, instruction, this.commandIncludesAttachments(instruction));
+      this.openChoicePicker(files, eligibleFolders, instruction, includeAttachments);
     }
   }
 
@@ -1233,10 +1261,6 @@ export default class AutoOrganizerPlugin extends Plugin {
     new FolderPickerModal(this.app, folders, title, (folder) => {
       void this.moveFiles(files, folder, title, includeAttachments);
     }).open();
-  }
-
-  private commandIncludesAttachments(instruction: string): boolean {
-    return /\battachments?\b/i.test(instruction);
   }
 
   private async moveFiles(files: TFile[], destination: Pick<TFolder, "path">, instruction: string, includeAttachments: boolean): Promise<void> {

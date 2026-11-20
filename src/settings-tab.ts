@@ -168,7 +168,7 @@ export class AutoOrganizerSettingTab extends PluginSettingTab {
 
     new Setting(advanced)
       .setName("Send note text for AI routing")
-      .setDesc("Off by default. AI requests always include your instruction, file name, current path, folder paths, and approved move examples. When enabled, a short note excerpt is also sent to the selected provider.")
+      .setDesc("Off by default. AI requests always include your instruction, file name, current path, folder paths, and approved move examples. When enabled, routing can also send excerpts from the selected note and possible destination notes.")
       .addToggle((toggle) => toggle
         .setValue(this.plugin.settings.sendNoteContent)
         .onChange((value) => {

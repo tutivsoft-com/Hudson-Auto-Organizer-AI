@@ -18,8 +18,8 @@ AI planning uses a connected Constance account and organize-run credits, includi
 
 Settings, session credentials, rules and undo history are stored locally. Notes stay local except the excerpts sent for requested AI actions. Account requests do not include note bodies. Anonymous fixed-name usage events use the existing analytics service. Diagnostic logs stay local unless you copy and share them. Do not share keys or session tokens.
 
-## Version 3.16.6
+## Version 3.16.7
 
-Per-vault organization rules, manual line filing, AI previews, Stop and Undo are available. Duplicate Undo and balance refresh were repaired.
+Fix routing privacy, duplicate workflows, and attachment handling.
 
-Obsidian Community release **3.16.6** requires Obsidian **1.11.4** or later. [GitHub release](https://github.com/tutivsoft-com/Hudson-Auto-Organizer-AI/releases/tag/3.16.6).
+Requires Obsidian 1.11.4 or later. [GitHub releases](https://github.com/tutivsoft-com/Hudson-Auto-Organizer-AI/releases).
