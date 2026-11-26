@@ -1,6 +1,6 @@
 # Hudson Auto Organizer AI 3.16.7 release verification
 
-24 November 2026, Windows. This checkpoint covers published files and source inspection. Native UI cases and screenshots are pending.
+Audit started 24 November and resumed 26 November 2026 on Windows. The released assets and source references passed verification. Obsidian opened the disposable vault and stopped at its first-open trust prompt. Hudson controls were blocked.
 
 ## Published bundle
 
@@ -17,11 +17,15 @@ The [GitHub release](https://github.com/tutivsoft-com/Hudson-Auto-Organizer-AI/r
 - The OpenRouter settings description names a USD $2 lifetime managed-key cap. The public README documents the intended USD $1 cap and identifies the displayed amount as stale. The settings text and the documented limit disagree.
 - The rules-file action passes a new path directly to Obsidian's vault file creation method. It checks for a folder at the final path, but does not prepare or validate missing parent folders. A nested path whose parent does not exist needs a desktop failure and recovery case.
 
-## Desktop cases to run
+## Native launch and coverage
 
-The exact downloaded bundle is staged in a disposable vault with synthetic greenhouse notes, two equivalent duplicate samples, and separate folders for moves, rules, and exclusions. Windows app launch review rejected the isolated debugging command before launching a process, with the reason `blocked by policy`. The normal installed-app launch with the synthetic vault and no debugging flags is queued behind other shared-desktop tests.
+The exact release was staged in a disposable vault with synthetic greenhouse notes, two equivalent duplicate samples, and separate folders for moves, rules, and exclusions. On 24 November, host command review rejected the isolated debugging launch before it created a process, citing "blocked by policy". A normal hidden launch created the vault workspace without exposing a visible window. A subsequent visible launch started shortly before the host interrupted the audit.
 
-| Surface | Planned cases |
+On 26 November, the regular installed Obsidian 1.15.1 executable opened the isolated Hudson Public QA vault with an ordinary local profile. It displayed "Do you trust the author of this vault?" before enabling community plugins. The trust prompt was left untouched. The audit captured its actual window and closed the isolated Obsidian instance. The exact fixture settings did not affect the existing user vault.
+
+[Native vault trust prompt](01-vault-trust-gate.jpeg) (1026 × 801 JPEG)
+
+| Blocked surface | Unrun cases |
 | --- | --- |
 | Settings | Simple and Advanced, each folder workflow, provider selection, both model fields, rules path, exclusions, move learning, source sharing, defaults and custom rule validation |
 | Entry points | Command palette, ribbon, note/editor context menus, multi-file selection and folder menu |
@@ -31,4 +35,4 @@ The exact downloaded bundle is staged in a disposable vault with synthetic green
 | AI review | Tiny synthetic request, unavailable service, exclusions, plan preview, application, cancellation and reviewed folder mode |
 | Account and credits | Signed-out status, balance failure and recovery, disabled or unavailable checkout. Live charges are excluded. |
 
-No new UI test, provider transaction, runtime edit, or publication result is claimed in this checkpoint.
+Hudson controls remain unverified. One genuine host startup image was captured. Nine additional in-app screenshots depend on reaching the plugin interface.
