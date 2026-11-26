@@ -1,6 +1,6 @@
 # Hudson Auto Organizer AI 3.16.7 release verification
 
-Audit started 24 November and resumed 26 November 2026 on Windows. The released assets and source references passed verification. Obsidian opened the disposable vault and stopped at its first-open trust prompt. Hudson controls were blocked.
+Audit started 24 November and resumed 26 November 2026 on Windows. The released assets and source references passed verification. The first visible launch stopped at vault trust. The later native smoke passed for a manual folder dry run in stock Obsidian 1.15.1.
 
 ## Published bundle
 
@@ -29,16 +29,25 @@ On 26 November, the regular installed Obsidian 1.15.1 executable opened the isol
 
 At 16:46 IST on 26 November, the verified 3.16.7 bundle loaded in stock Obsidian 1.15.1 using the previously trusted, isolated Hudson QA vault. The app opened the synthetic welcome note, and a fresh diagnostic log recorded one `plugin.loaded` event for release 3.16.7. The isolated process used the prepared loopback proxy during the launch.
 
-Concurrent Windows input interrupted the smoke test before the preview opened. The isolated process was stopped, and the original private synthetic profile and its 3.16.9 files were restored and verified against the backup. The preview and its screenshots remain pending.
+Concurrent Windows input interrupted that attempt before the preview opened. The isolated process was stopped, and the original private synthetic profile and its 3.16.9 files were restored and verified against the backup.
 
-| Blocked surface | Unrun cases |
+## Native manual dry run passed
+
+At 17:02 IST on 26 November, stock Obsidian 1.15.1 loaded the exact published 3.16.7 bundle in the trusted synthetic fixture. The native command palette opened **Preview folder changes (dry run)**. Selecting **Review Files** and **Choose destinations manually** opened Hudson’s separate review window with two synthetic source cards, version 3.16.7, and zero items selected or applied.
+
+**Cancel** closed the review window. All 38 synthetic Markdown files matched the original fixture by relative path and SHA-256. The diagnostic log recorded `plugin.loaded`, `preview.started`, `preview.completed`, and `review.closed`. The session remained signed out and produced no move history. Obsidian’s background update checks returned `ERR_PROXY_CONNECTION_FAILED` under the scoped loopback proxy. The isolated instance exited and the private 3.16.9 fixture was restored and verified.
+
+- Obsidian command palette with Hudson’s native dry-run command. [Command palette](02-native-command-palette.jpeg)
+- Hudson manual preview showing two source cards, zero changes, and the release version. [Manual preview](03-native-manual-preview.jpeg)
+
+## Coverage outside this smoke
+
+| Surface | Cases |
 | --- | --- |
 | Settings | Simple and Advanced, each folder workflow, provider selection, both model fields, rules path, exclusions, move learning, source sharing, defaults and custom rule validation |
-| Entry points | Command palette, ribbon, note/editor context menus, multi-file selection and folder menu |
-| Manual review | Folder picker, invalid destination, select all/none, row details, cancel, apply, open destination and undo |
+| Entry points | Ribbon, note/editor context menus, multi-file selection and folder menu |
+| Manual review | Invalid destination, select all/none, apply, open destination and undo |
 | Line filing | Choose destination, preserve unselected text, verify filed content and restore it |
 | Duplicates | Compare exact and similar results, preview identical notes and verify recovery where permitted |
 | AI review | Tiny synthetic request, unavailable service, exclusions, plan preview, application, cancellation and reviewed folder mode |
 | Account and credits | Signed-out status, balance failure and recovery, disabled or unavailable checkout. Live charges are excluded. |
-
-Hudson controls remain unverified. One genuine host startup image was captured. Nine additional in-app screenshots depend on reaching the plugin interface.
