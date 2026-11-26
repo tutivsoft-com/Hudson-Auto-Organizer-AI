@@ -25,6 +25,12 @@ On 26 November, the regular installed Obsidian 1.15.1 executable opened the isol
 
 [Native vault trust prompt](01-vault-trust-gate.jpeg) (1026 × 801 JPEG)
 
+## Native startup follow-up
+
+At 16:46 IST on 26 November, the verified 3.16.7 bundle loaded in stock Obsidian 1.15.1 using the previously trusted, isolated Hudson QA vault. The app opened the synthetic welcome note, and a fresh diagnostic log recorded one `plugin.loaded` event for release 3.16.7. The isolated process used the prepared loopback proxy during the launch.
+
+Concurrent Windows input interrupted the smoke test before the preview opened. The isolated process was stopped, and the original private synthetic profile and its 3.16.9 files were restored and verified against the backup. The preview and its screenshots remain pending.
+
 | Blocked surface | Unrun cases |
 | --- | --- |
 | Settings | Simple and Advanced, each folder workflow, provider selection, both model fields, rules path, exclusions, move learning, source sharing, defaults and custom rule validation |
