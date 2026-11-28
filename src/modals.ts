@@ -10,61 +10,37 @@ export interface AutoOrganizeDeferredItem {
   reason: string;
 }
 
-export interface AutoOrganizeRunSummary {
+interface DeferredReviewSummary {
   sourceFolder: string;
-  duplicateCount: number;
-  fileMoveCount: number;
-  lineRouteCount: number;
   deferred: AutoOrganizeDeferredItem[];
   reportPath: string;
-  changes?: Array<{ kind: string; fromPath: string; toPath: string }>;
   onOpenPath: (path: string) => void;
 }
 
-export class AutoOrganizeResultsModal extends Modal {
-  private readonly summary: AutoOrganizeRunSummary;
-
-  constructor(app: App, summary: AutoOrganizeRunSummary) {
-    super(app);
-    this.summary = summary;
-  }
+export class DeferredReviewModal extends Modal {
+  constructor(app: App, private readonly summary: DeferredReviewSummary) { super(app); }
 
   onOpen(): void {
     const { contentEl } = this;
     contentEl.empty();
     contentEl.addClass("oao-auto-results");
-    contentEl.createEl("h2", { text: "Auto Organize complete" });
+    contentEl.createEl("h2", { text: "Deferred Auto Organize items" });
     contentEl.createEl("p", { text: `Folder: ${this.summary.sourceFolder || "Vault root"}` });
-    const list = contentEl.createEl("ul");
-    list.createEl("li", { text: `${this.summary.duplicateCount} extra duplicate file${this.summary.duplicateCount === 1 ? "" : "s"} moved to Deleted.` });
-    list.createEl("li", { text: `${this.summary.lineRouteCount} one-line entr${this.summary.lineRouteCount === 1 ? "y" : "ies"} filed in category notes.` });
-    list.createEl("li", { text: `${this.summary.fileMoveCount} full note${this.summary.fileMoveCount === 1 ? "" : "s"} moved to destination folders.` });
-    list.createEl("li", { text: `${this.summary.deferred.length} item${this.summary.deferred.length === 1 ? "" : "s"} deferred for your review.` });
-
-    if (this.summary.changes?.length) {
-      contentEl.createEl("h3", { text: "Changes" });
-      const changes = contentEl.createEl("ul");
-      for (const change of this.summary.changes) {
-        changes.createEl("li", { text: `${change.kind}: ${change.fromPath} → ${change.toPath}` });
-      }
+    contentEl.createEl("h3", { text: "Needs review" });
+    const deferred = contentEl.createDiv({ cls: "oao-auto-deferred" });
+    for (const item of this.summary.deferred) {
+      const row = deferred.createDiv({ cls: "oao-duplicate-item" });
+      row.createEl("strong", { text: item.path });
+      row.createEl("div", { text: item.reason });
+      const open = row.createEl("button", { text: "Open for review" });
+      open.addEventListener("click", () => this.summary.onOpenPath(item.path));
     }
 
-    if (this.summary.deferred.length) {
-      contentEl.createEl("h3", { text: "Needs review" });
-      const deferred = contentEl.createDiv({ cls: "oao-auto-deferred" });
-      for (const item of this.summary.deferred) {
-        const row = deferred.createDiv({ cls: "oao-duplicate-item" });
-        row.createEl("strong", { text: item.path });
-        row.createEl("div", { text: item.reason });
-        const open = row.createEl("button", { text: "Open for review" });
-        open.addEventListener("click", () => this.summary.onOpenPath(item.path));
-      }
+    if (this.summary.reportPath) {
+      const report = contentEl.createEl("p");
+      const openReport = report.createEl("button", { text: "Open run log", attr: { title: this.summary.reportPath } });
+      openReport.addEventListener("click", () => this.summary.onOpenPath(this.summary.reportPath));
     }
-
-    const report = contentEl.createEl("p");
-    report.createEl("span", { text: "Run log: " });
-    const openReport = report.createEl("button", { text: this.summary.reportPath });
-    openReport.addEventListener("click", () => this.summary.onOpenPath(this.summary.reportPath));
   }
 
   onClose(): void {

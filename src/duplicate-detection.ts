@@ -113,6 +113,7 @@ export async function findDuplicatePairs(
     const params = aiRequest(provider, apiKey, "embeddings", { model: model || (provider === "openai" ? "text-embedding-3-small" : DEFAULT_EMBEDDING_MODEL), input: batch, encoding_format: "float" });
     diagnostics.event("ai.embedding_batch", { provider, count: batch.length, batch: Math.floor(start / EMBEDDING_BATCH_SIZE) + 1 });
     const response = await diagnostics.request("network.ai.embeddings", requestUrl, params);
+    if (stopped()) return [];
     if (response.status < 200 || response.status >= 300) {
       throw new Error(`${providerName(provider)} returned HTTP ${response.status} while embedding notes.`);
     }

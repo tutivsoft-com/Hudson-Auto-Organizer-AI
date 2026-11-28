@@ -97,7 +97,7 @@ export class AutoOrganizerSettingTab extends PluginSettingTab {
     advanced.hidden = this.plugin.settings.settingsMode !== "advanced";
 
     new Setting(containerEl).setName("AI provider")
-      .setDesc("OpenAI is the default. Switch to OpenRouter when needed; failed requests never switch vendors automatically.")
+      .setDesc("New installs use OpenRouter. Choose OpenAI to use your own key. Failed requests stay with the selected provider.")
       .addDropdown((dropdown) => dropdown.addOption("openai", "OpenAI").addOption("openrouter", "OpenRouter")
         .setValue(this.plugin.settings.aiProvider).onChange(async (value) => {
           this.plugin.settings.aiProvider = value === "openrouter" ? "openrouter" : "openai";
@@ -105,7 +105,7 @@ export class AutoOrganizerSettingTab extends PluginSettingTab {
         }));
     if (this.plugin.settings.aiProvider === "openai") {
       const keySetting = new Setting(containerEl).setName("OpenAI key")
-        .setDesc("Stored in Obsidian Secret Storage as hudson-openai. The key is not stored in plugin settings or the public bundle. OpenRouter's $2 cap does not apply to OpenAI.");
+        .setDesc("Hudson reads your key from Obsidian Secret Storage. Your OpenAI account controls OpenAI charges.");
       new SecretComponent(this.app, keySetting.controlEl).setValue(OPENAI_SECRET_ID).onChange((id) => {
         if (id && id !== OPENAI_SECRET_ID) {
           const key = this.app.secretStorage.getSecret(id);
@@ -116,7 +116,7 @@ export class AutoOrganizerSettingTab extends PluginSettingTab {
         .addText((text) => text.setPlaceholder(OPENAI_MODEL).setValue(this.plugin.settings.openaiModel)
           .onChange((value) => { this.plugin.settings.openaiModel = value.trim() || OPENAI_MODEL; void this.plugin.saveSettings(); }));
     } else {
-      new Setting(containerEl).setName("AI service").setDesc("OpenRouter uses its managed key with the recorded USD $2 lifetime provider cap.");
+      new Setting(containerEl).setName("AI service").setDesc("The managed OpenRouter key has a USD $1 lifetime limit.");
     }
 
     new Setting(advanced)

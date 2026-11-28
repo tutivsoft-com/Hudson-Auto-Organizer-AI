@@ -1,6 +1,6 @@
 import { FileSystemAdapter, Menu, Notice, Platform, Plugin, TAbstractFile, TFile, TFolder } from "obsidian";
 import { AutoOrganizerSettingTab } from "./settings-tab";
-import { AutoOrganizeResultsModal, DuplicateResultsModal, FolderPickerModal, InstructionModal } from "./modals";
+import { DeferredReviewModal, DuplicateResultsModal, FolderPickerModal, InstructionModal } from "./modals";
 import { findFolderByPath, isExcludedPath, listFolders, matchFolderPhrase, normalizePath, parentFolderPath } from "./folder-utils";
 import { commandIncludesAttachments, createRulesTemplate, extractDestinationPhrase, parseRules, resolveLearnedMove, resolveRule } from "./rules";
 import { suggestDestination } from "./openrouter";
@@ -131,7 +131,7 @@ export default class AutoOrganizerPlugin extends Plugin {
       lastAutoOrganizeDeferred: Array.isArray(saved?.lastAutoOrganizeDeferred) ? saved.lastAutoOrganizeDeferred : [],
       lastAutoOrganizeReportPath: typeof saved?.lastAutoOrganizeReportPath === "string" ? saved.lastAutoOrganizeReportPath : "",
       lastAutoOrganizeSourceFolder: typeof saved?.lastAutoOrganizeSourceFolder === "string" ? saved.lastAutoOrganizeSourceFolder : "",
-      aiProvider: saved?.aiProvider === "openrouter" ? "openrouter" : "openai",
+      aiProvider: saved?.aiProvider === "openai" ? "openai" : DEFAULT_SETTINGS.aiProvider,
       openaiModel: typeof saved?.openaiModel === "string" && saved.openaiModel.trim() ? saved.openaiModel.trim() : OPENAI_MODEL,
       organizeWorkflow: saved?.organizeWorkflow === "automatic" ? "automatic" : "preview",
       settingsMode: saved?.settingsMode === "advanced" ? "advanced" : "simple",
@@ -199,19 +199,24 @@ export default class AutoOrganizerPlugin extends Plugin {
 
   async openRulesFile(): Promise<void> {
     const path = this.settings.rulesFilePath.replace(/\\/g, "/").trim();
-    if (!path || path.startsWith("/") || path.split("/").includes("..")) {
-      new Notice("Choose a rules file path inside this vault.");
+    if (!isSafeVaultPath(path) || !path.toLowerCase().endsWith(".md")) {
+      new Notice("Choose a Markdown rules file path inside this vault.");
       return;
     }
-    const existing = this.app.vault.getAbstractFileByPath(path);
-    if (existing instanceof TFolder) {
-      new Notice("The rules path points to a folder. Choose a Markdown file path.");
-      return;
+    try {
+      const existing = this.app.vault.getAbstractFileByPath(path);
+      if (existing instanceof TFolder) {
+        new Notice("The rules path points to a folder. Choose a Markdown file path.");
+        return;
+      }
+      const parent = parentFolderPath(path);
+      if (!existing && parent) await this.ensureFolder(parent);
+      const file = existing instanceof TFile ? existing : await this.app.vault.create(path, createRulesTemplate());
+      await this.app.workspace.getLeaf(true).openFile(file);
+    } catch (error) {
+      diagnostics.failure("rules.open", error);
+      new Notice("Could not open or create the rules file. Check the path and try again.");
     }
-    const file = existing instanceof TFile
-      ? existing
-      : await this.app.vault.create(path, createRulesTemplate());
-    await this.app.workspace.getLeaf(true).openFile(file);
   }
 
   async undoMove(id?: string, reviewPlan?: OrganizePlan): Promise<boolean> {
@@ -522,13 +527,10 @@ export default class AutoOrganizerPlugin extends Plugin {
       new Notice("There are no deferred Auto Organize items to review.");
       return;
     }
-    new AutoOrganizeResultsModal(this.app, {
+    new DeferredReviewModal(this.app, {
       sourceFolder: this.settings.lastAutoOrganizeSourceFolder || "Vault root",
-      duplicateCount: 0,
-      fileMoveCount: 0,
-      lineRouteCount: 0,
       deferred: this.settings.lastAutoOrganizeDeferred,
-      reportPath: this.settings.lastAutoOrganizeReportPath || "No run log is available",
+      reportPath: this.settings.lastAutoOrganizeReportPath,
       onOpenPath: (path) => {
         const file = this.app.vault.getAbstractFileByPath(path);
         if (file instanceof TFile) void this.app.workspace.getLeaf(true).openFile(file);
@@ -882,7 +884,12 @@ export default class AutoOrganizerPlugin extends Plugin {
           }
         }
         if (!plan.moves.length && !plan.appends.length && !plan.createdNotes?.length && !plan.sourceEdits?.length) return;
-        const deferred = [ ...plan.deferred, ...plan.actions.filter((a) => a.status !== "done").map((a) => ({ path: a.sourcePath, reason: `${a.lineNumber ? `Line ${a.lineNumber}: ` : ""}${a.outcome || (a.selected ? "Still pending." : "Skipped by you.")}` })) ];
+        const remaining = plan.actions.filter((action) => action.status !== "done").map((action) => {
+          const suggestionReason = action.confidence === undefined ? "" : action.reason;
+          const reason = action.outcome || (action.selected ? "Still pending." : suggestionReason || "No action was selected.");
+          return { path: action.sourcePath, reason: action.lineNumber ? `Line ${action.lineNumber}: ${reason}` : reason };
+        });
+        const deferred = [...plan.deferred, ...remaining];
         this.settings.lastAutoOrganizeDeferred = deferred;
         this.settings.lastAutoOrganizeSourceFolder = folder?.path || "";
         await this.ensureFolder(LOG_FOLDER_NAME);

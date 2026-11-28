@@ -4,17 +4,30 @@ export interface DestinationSample { path: string; sample: string; folderPath?: 
 export type DestinationContext = (items: Array<{ path: string; excerpt: string; sourceContext?: string }>, stopped: () => boolean) => Promise<DestinationSample[]>;
 
 const MAX_SAMPLES = 12;
-const SAMPLE_WORDS = 45;
+const SOURCE_CHARACTERS = 1600;
 const SAMPLE_CHARACTERS = 320;
+const SAMPLE_SEPARATOR = " | ";
 
 export function sourceFileExcerpt(content: string): string {
-  const words = content.trim().split(/\s+/u);
-  if (words.length <= 200) return content.trim().slice(0, 1600);
-  return [
-    `Start: ${words.slice(0, 65).join(" ")}`,
-    `Middle: ${words.slice(Math.max(0, Math.floor(words.length / 2) - 32), Math.floor(words.length / 2) + 33).join(" ")}`,
-    `End: ${words.slice(-65).join(" ")}`
-  ].join("\n").slice(0, 1600);
+  const text = content.trim();
+  const words = text.split(/\s+/u);
+  if (words.length < 3 || (words.length <= 200 && text.length <= SOURCE_CHARACTERS)) {
+    return text.slice(0, SOURCE_CHARACTERS);
+  }
+
+  const sectionWords = Math.min(65, Math.floor(words.length / 3));
+  const middleWord = Math.floor(words.length / 2);
+  const middleStart = middleWord - Math.floor(sectionWords / 2);
+  const labels = ["Start: ", "Middle: ", "End: "];
+  const sectionCharacters = Math.floor((SOURCE_CHARACTERS - labels.join("").length - 2) / labels.length);
+  const start = words.slice(0, sectionWords).join(" ").slice(0, sectionCharacters);
+  const middle = words.slice(middleStart, middleStart + sectionWords).join(" ");
+  const midpoint = words.slice(middleStart, middleWord).join(" ").length;
+  const middleOffset = Math.min(Math.max(0, middle.length - sectionCharacters), Math.max(0, midpoint - Math.floor(sectionCharacters / 2)));
+  const end = words.slice(-sectionWords).join(" ").slice(-sectionCharacters);
+  return [start, middle.slice(middleOffset, middleOffset + sectionCharacters), end].map((sample, index) =>
+    labels[index] + sample.trim()
+  ).join("\n");
 }
 
 export function sourceLineContext(content: string, lineNumber: number): string {
@@ -37,8 +50,9 @@ function sampleText(content: string): string {
     .replace(/!?\[([^\]]*)\]\(https?:\/\/[^)]+\)/gu, "$1"))
     .filter((line) => line && !/^https?:\/\/\S+$/u.test(line) && !/^```/u.test(line));
   const positions = [...new Set([0, Math.floor(lines.length / 2), lines.length - 1])];
-  return firstWords(positions.filter((i) => i >= 0 && i < lines.length)
-    .map((i) => firstWords(lines[i], 15)).join(" | "), SAMPLE_WORDS).slice(0, SAMPLE_CHARACTERS);
+  if (!lines.length) return "";
+  const sectionCharacters = Math.floor((SAMPLE_CHARACTERS - (positions.length - 1) * SAMPLE_SEPARATOR.length) / positions.length);
+  return positions.map((i) => firstWords(lines[i], 14).slice(0, sectionCharacters).trimEnd()).join(SAMPLE_SEPARATOR);
 }
 
 // Cache only short samples for this planning run, never destination bodies or persistent data.
