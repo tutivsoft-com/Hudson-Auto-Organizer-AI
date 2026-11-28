@@ -18,6 +18,10 @@ AI planning uses a connected Constance account and organize-run credits, includi
 
 Settings, session credentials, rules and undo history are stored locally. Notes stay local except the excerpts sent for requested AI actions. Account requests do not include note bodies. Anonymous fixed-name usage events use the existing analytics service. Diagnostic logs stay local unless you copy and share them. Do not share keys or session tokens.
 
+## Release 3.16.9
+
+Improves settings and deferred review. Limits the excerpts used in organization workflows. [Release on GitHub](https://github.com/tutivsoft-com/Hudson-Auto-Organizer-AI/releases/tag/3.16.9).
+
 ## Version 3.16.7
 
 Fix routing privacy, duplicate workflows, and attachment handling.
